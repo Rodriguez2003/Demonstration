@@ -15,6 +15,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Reflection;
 using System.IO;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 namespace Demonstration
 {
@@ -31,6 +34,22 @@ namespace Demonstration
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            //Configuracion para JWT
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer(options =>
+                {
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
+                        ValidateLifetime = true,
+                        ValidateIssuerSigningKey = true,
+                        ValidIssuer = Configuration["Jwt:Issuer"],
+                        ValidAudience = Configuration["Jwt:Audience"],
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(Configuration["Jwt:Key"]))
+                    };
+                });
+
             //Conexion y el contexto de la base de datos
             var connectionString = Configuration.GetConnectionString("demostración");
 
@@ -82,6 +101,7 @@ namespace Demonstration
             {
                 app.UseDeveloperExceptionPage();
             }
+
             app.UseSwagger(c =>
             {
                 c.SerializeAsV2 = true;
@@ -95,6 +115,9 @@ namespace Demonstration
             });
 
             app.UseRouting();
+
+            //agregando la autenticacion y la autorizacion para el jwt
+            app.UseAuthentication();
 
             app.UseAuthorization();
 

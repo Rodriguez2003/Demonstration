@@ -7,6 +7,6 @@ namespace Demonstration.Data
         public DataContext(DbContextOptions<DataContext> options) : base(options)
         {
         }
-        public DbSet<User> user { get; set; }
+        public DbSet<UserModel> user { get; set; }
     }
 }

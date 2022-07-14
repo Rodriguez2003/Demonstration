@@ -1,7 +1,9 @@
 ﻿using Demonstration.Data;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Linq;
+using System.Security.Claims;
 
 namespace Demonstration.Controllers
 {
@@ -9,80 +11,47 @@ namespace Demonstration.Controllers
     [ApiController]
     public class UserController : ControllerBase
     {
-        private readonly DataContext _DbContext;
-
-        public UserController(DataContext dbContext)
+        [HttpGet("Admins")]
+        [Authorize] //validando autorizacion para ingresar a este endpoint
+        public IActionResult adminEndPoint()
         {
-            _DbContext=dbContext;
-        }
-
-        [HttpGet("all")]
-        public IActionResult getAll()
-        {
-            return Ok(_DbContext.user.ToList());
-        }
-
-        [HttpPost("new/")]
-        public IActionResult newProduct([FromForm] User request)
-        {
-            _DbContext.user.Add(request);
-            _DbContext.SaveChanges();
-
-            var response = new
+            var currentUser = getCurrentUserInfo();
+            if (currentUser.Role != "administrator")//validacion 'manual' puede hacerse por medio de anotaciones
             {
-                Status = 200,
-                Message = "Usuario Ingresado",
-                Data = request
-            };
-            return Ok(response);
-        }
-
-        [HttpPut("update/")]
-        public IActionResult updateProduct([FromForm] User request)
-        {
-            var Actualizar = _DbContext.user.Where(t =>
-             t.UserId ==
-             request.UserId).FirstOrDefault();
-
-            if (Actualizar != null)
-            {
-                Actualizar.Nombre = request.Nombre;
-                _DbContext.user.Update(Actualizar);
-                _DbContext.SaveChanges();
-
-                var response = new
-                {
-                    Status = 200,
-                    Message = "Usuario Modificado",
-                    Data = Actualizar
-                };
-                return Ok(response);
+                return Ok(new { message = "No es administrador", statusCode = 200 });
             }
-            return StatusCode(400, "El Id no se ha encontrado :( ");
+            return Ok(currentUser);
         }
 
-        [HttpDelete("delete/")]
-        public IActionResult deleteProduct([FromForm] User request)
+        //metodo publico al no tener la anotacion [Authorize]
+        [HttpGet("publico")]
+        public IActionResult publicMethod(string palabra)
         {
-            var Eliminar = _DbContext.user.Where(t =>
-             t.UserId ==
-             request.UserId).FirstOrDefault();
+            return Ok($"Metodo publico {palabra}");
+        }
 
-            if (Eliminar != null)
+        //con este metodo podemos obtener la informacion que guardamos al momento de iniciar sesion
+        //de esta forma no tendriamos que hacer consultas nuevamente a la bd para trabajar con la informacion
+        //del usuario loggeado
+
+
+        private UserModel getCurrentUserInfo()
+        {
+            var user = HttpContext.User.Identity as ClaimsIdentity;
+            if (user != null)
             {
-                Eliminar.UserId = request.UserId;
-                _DbContext.user.Remove(Eliminar);
-                _DbContext.SaveChanges();
-
-                var response = new
+                var userClaims = user.Claims;
+                return new UserModel
                 {
-                    Status = 200,
-                    Message = "Usuario Eliminado",
-                    Data = Eliminar
+                    Username = userClaims.FirstOrDefault(u => u.Type == ClaimTypes.NameIdentifier)?.Value,
+                    EmailAddress = userClaims.FirstOrDefault(u => u.Type == ClaimTypes.Email)?.Value,
+                    GivenName = userClaims.FirstOrDefault(u => u.Type == ClaimTypes.GivenName)?.Value,
+                    Surname = userClaims.FirstOrDefault(u => u.Type == ClaimTypes.Surname)?.Value,
+                    Role = userClaims.FirstOrDefault(u => u.Type == ClaimTypes.Role)?.Value
+
                 };
-                return Ok(response);
             }
-            return StatusCode(400, "El Id no se ha encontrado :( ");
+            return null;
         }
     }
 }
