@@ -58,24 +58,23 @@ namespace Demonstration
             // Registrar el generador Swagger, definiendo 1 o más documentos Swagger
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo
+                var securityScheme = new OpenApiSecurityScheme
                 {
-                    Version = "v1",
-                    Title = "ToDo API",
-                    Description = "A simple example ASP.NET Core Web API",
-                    TermsOfService = new Uri("https://example.com/terms"),
-                    Contact = new OpenApiContact
+                    Name = "JWT Authentication",
+                    Description = "Ingrese su Token",
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JMT",
+                    Reference = new OpenApiReference
                     {
-                        Name = "Shayne Boyer",
-                        Email = string.Empty,
-                        Url = new Uri("https://twitter.com/spboyer"),
-                    },
-                    License = new OpenApiLicense
-                    {
-                        Name = "Use under LICX",
-                        Url = new Uri("https://example.com/license"),
+                        Id = JwtBearerDefaults.AuthenticationScheme,
+                        Type = ReferenceType.SecurityScheme
                     }
-                });
+                };
+
+                c.AddSecurityDefinition(securityScheme.Reference.Id, securityScheme);
+                c.AddSecurityRequirement(new OpenApiSecurityRequirement { { securityScheme, new string[] { } } });
             });
 
             //deshabilitación de cors
@@ -102,16 +101,13 @@ namespace Demonstration
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseSwagger(c =>
-            {
-                c.SerializeAsV2 = true;
-            });
+            //Habilitar swagger
+            app.UseSwagger();
 
-            // Habilitar el middleware para servir swagger-ui (HTML, JS, CSS, etc.),
-            // especificando el punto final de Swagger JSON.
+            //indica la ruta para generar la configuración de swagger
             app.UseSwaggerUI(c =>
             {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "My API V1");
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Api REST");
             });
 
             app.UseRouting();
